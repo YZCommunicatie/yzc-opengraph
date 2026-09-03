@@ -24,7 +24,8 @@ Via de Joomla-extensiemanager: zip de repobestanden en installeer de zip via
 fallback-instellingen in.
 
 De plugin update zichzelf automatisch via de feed in `manifest.xml`, die Joomla
-ophaalt vanaf dit repo op GitHub (branch `master`).
+ophaalt vanaf dit repo op GitHub. Sites op v1.3.1 of nieuwer halen hem op vanaf
+`main`; sites die nog v1.3.0 draaien vanaf de brugbranch `master`. Zie *Releasen*.
 
 ## Releasen
 
@@ -33,14 +34,52 @@ Zie de algemene Joomla-procedure in
 Voor dit project concreet:
 
 1. Bump `<version>` in `opengraph.xml`.
-2. Maak **eerst** de git tag / GitHub release `v<versie>` aan, zodat de zip-URL
-   resolvet.
-3. Bump **pas daarna** `<version>` in `manifest.xml` op `master` en werk de
-   `<downloadurl>` bij naar de zip van de nieuwe tag — in de andere volgorde
-   zien klantsites een update waarvan de download 404't.
+2. Bump `<version>` in `manifest.xml` **en** werk de `<downloadurl>` bij naar de
+   zip van de nieuwe `v<versie>`-tag.
+3. Commit met een Conventional Commit-bericht.
+4. Maak **eerst** de git tag / GitHub release `v<versie>` aan, zodat de zip-URL
+   resolvet — **pas daarna** de manifest-wijziging naar `main` pushen. In de
+   andere volgorde zien klantsites een update waarvan de download 404't.
+5. Zet `manifest.xml` daarna **ook op de brugbranch `master`**. Deze stap is geen
+   bijzaak en geen optie:
+
+   ```bash
+   git checkout master
+   git checkout main -- manifest.xml
+   git commit -m "chore(release): manifest op de brugbranch naar v<versie>"
+   git push origin master
+   git checkout main
+   ```
 
 De twee versienummers moeten synchroon blijven: klantsites lezen `manifest.xml`
-vanaf `master` om een update te ontdekken.
+om een update te ontdekken.
+
+### Waarom `manifest.xml` op twee branches moet
+
+Deze repo heette tot 2026-09-03 `YZC-Opengraph` en serveerde zijn update-feed vanaf
+`master`. Sinds v1.3.1 wijst de `<updateservers>`-URL in `opengraph.xml` naar `main`.
+Een geïnstalleerde plugin bevraagt de URL die in *zijn eigen* versie staat, dus beide
+URL's zijn tegelijk in gebruik:
+
+| Wie bevraagt hem | URL |
+|---|---|
+| Sites op v1.3.1 of nieuwer | `https://raw.githubusercontent.com/YZCommunicatie/yzc-opengraph/main/manifest.xml` |
+| Sites op v1.3.0 | `https://raw.githubusercontent.com/YZCommunicatie/YZC-Opengraph/master/manifest.xml` |
+
+Sla je stap 5 over, dan zien de sites op v1.3.0 de nieuwe release niet, installeren ze
+nooit de versie die hun feed-URL naar `main` verlegt, en blijven ze eeuwig hangen. Sla
+je stap 4 over, dan gebeurt precies hetzelfde bij de sites die juist wél netjes zijn
+bijgewerkt. Er is geen enkele branch die in zijn eentje volstaat.
+
+Op `master` wordt **alleen** `manifest.xml` bijgehouden. De rest van die branch is
+bevroren op de toestand van vóór de migratie — `opengraph.xml` staat er nog op 1.3.0
+met de oude feed-URL, en dat hoort zo. Werk daar dus nooit iets anders bij.
+
+De brugbranch mag pas weg als zeker is dat élke klantsite v1.3.1 of nieuwer heeft
+geïnstalleerd. Dat is van buitenaf niet te zien — er is geen telemetrie en geen lijst
+van installaties — dus in de praktijk blijft `master` staan. Een ongebruikte branch
+kost niets; verwijder hem nooit als opruimactie. Zie uitzondering 5 in
+[`CONVENTIONS.md`](https://github.com/YZCommunicatie/yzc-standards/blob/main/CONVENTIONS.md).
 
 ## Licentie
 
