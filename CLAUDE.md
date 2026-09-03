@@ -25,6 +25,10 @@ of testsuite — gewone PHP/XML, direct bewerkt. Gebruikt de moderne namespaced 
     `<meta name="description">` van het document, niet een aparte property-tag — vermoedelijk
     niet wat de oorspronkelijke auteur bedoelde, maar functioneel gedrag, niet aanpassen zonder
     het expliciet te toetsen op een testsite.
+  - **Bekende bug, bewust niet opgelost:** regel 79, `setMetadata('og:image:type ', ...)`, bevat
+    een spatie ín de tagnaam. Daardoor komt de metatag onder een verkeerde naam in de output
+    terecht in plaats van als `og:image:type`. Oplossen verandert de gerenderde output op
+    klantsites; dat is een aparte beslissing en gebeurt hier niet stilzwijgend.
 - `src/Helper/OpengraphHelper.php` — alle waarde-opbouw: sitename, locale, URL, titel,
   beschrijving (truncate naar 156 tekens), afbeelding (artikel-/categorie-/fallback-afbeelding)
   en auteursnaam.
@@ -36,11 +40,15 @@ of testsuite — gewone PHP/XML, direct bewerkt. Gebruikt de moderne namespaced 
   plugin automatisch bij installatie.
 - `manifest.xml` — de update-feed, ruwvorm opgehaald vanaf de `master`-branch van dit repo
   door Joomla-sites. **Niet aanraken buiten het releaseproces** — zie "Releasing a new version".
+- `language/en-GB/en-GB.plg_system_opengraph.ini` — alle veldlabels die in `opengraph.xml`
+  gebruikt worden. Er is alleen een en-GB-taalbestand, geen nl-NL — niet vanzelfsprekend voor
+  een Nederlandse extensie, maar de reden dat de instellingen van deze plugin in het Engels
+  worden getoond.
 
 ## Compatibility constraints
 
-- Doelplatform Joomla 4 / 5 (`targetplatform` in `opengraph.xml`); geen Joomla 6-ondersteuning
-  gemeld.
+- Doelplatform Joomla 4 / 5 (`targetplatform` in `manifest.xml`, niet in `opengraph.xml` — dat
+  laatste bevat geen enkele Joomla-versiegrens); geen Joomla 6-ondersteuning gemeld.
 - Minimale PHP-versie wordt bepaald door de minimale Joomla-versie (Joomla 4: PHP 7.2.5+;
   Joomla 5: PHP 8.1+).
 
