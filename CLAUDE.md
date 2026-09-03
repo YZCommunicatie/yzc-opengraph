@@ -38,8 +38,8 @@ of testsuite — gewone PHP/XML, direct bewerkt. Gebruikt de moderne namespaced 
 - `script.php` — installer-script (legacy-vernoemde klasse
   `plgSystemOpengraphInstallerScript`, Joomla-conventie voor installer scripts): activeert de
   plugin automatisch bij installatie.
-- `manifest.xml` — de update-feed, ruwvorm opgehaald vanaf de `master`-branch van dit repo
-  door Joomla-sites. **Niet aanraken buiten het releaseproces** — zie "Releasing a new version".
+- `manifest.xml` — de update-feed, ruwvorm opgehaald vanaf de `main`-branch van dit repo
+  door Joomla-sites (en tot de brugbranch verdwijnt ook nog vanaf `master`). **Niet aanraken buiten het releaseproces** — zie "Releasing a new version".
 - `language/en-GB/en-GB.plg_system_opengraph.ini` — alle veldlabels die in `opengraph.xml`
   gebruikt worden. Er is alleen een en-GB-taalbestand, geen nl-NL — niet vanzelfsprekend voor
   een Nederlandse extensie, maar de reden dat de instellingen van deze plugin in het Engels
@@ -62,12 +62,13 @@ Klantsites updaten automatisch via dit repo, dus een release vereist:
    volgorde zien klantsites een update waarvan de download 404't. Zie hoofdstuk 6 van
    `CONVENTIONS.md`.
 
-> Deze repo staat bewust nog op de brugbranch `master` (zie hoofdstuk 4.4 van
-> `CONVENTIONS.md`): de update-feed wordt geserveerd vanaf
-> `raw.githubusercontent.com/YZCommunicatie/YZC-Opengraph/master/manifest.xml` en klantsites
-> hangen daaraan. Zolang die brug bestaat, moet `manifest.xml` op `master` bij elke release
-> meebijgewerkt worden, ook nadat `main` de standaardbranch is geworden — anders blijven
-> klantsites die nog de oude feed-URL bevragen eeuwig hangen op de oude versie.
+> Deze repo heette tot 3 september 2026 `YZC-Opengraph` en serveerde de feed vanaf `master`.
+> Sinds v1.3.1 wijst de feed-URL naar
+> `raw.githubusercontent.com/YZCommunicatie/yzc-opengraph/main/manifest.xml`.
+> De brugbranch `master` blijft bewust bestaan (zie hoofdstuk 3 van `CONVENTIONS.md`): klantsites
+> die nog v1.3.0 draaien bevragen de oude URL op `master`. Zolang die brug bestaat, moet
+> `manifest.xml` op `master` bij elke release meebijgewerkt worden (`git checkout master &&
+> git checkout main -- manifest.xml`) — anders blijven die sites eeuwig hangen op de oude versie.
 
 ## Conventions
 

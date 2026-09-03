@@ -1,4 +1,4 @@
-# YZC-Opengraph
+# yzc-opengraph
 
 Joomla-systeemplugin (`plg_system_opengraph`) die Open Graph-, Twitter Card- en Facebook-metatags zet voor social sharing.
 
