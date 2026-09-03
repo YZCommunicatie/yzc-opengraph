@@ -36,11 +36,13 @@ Voor dit project concreet:
 1. Bump `<version>` in `opengraph.xml`.
 2. Bump `<version>` in `manifest.xml` **en** werk de `<downloadurl>` bij naar de
    zip van de nieuwe `v<versie>`-tag.
-3. Commit met een Conventional Commit-bericht.
-4. Maak **eerst** de git tag / GitHub release `v<versie>` aan, zodat de zip-URL
+3. Bouw de installatiezip met `php build.php` (schrijft
+   `dist/opengraph-<versie>.zip`) en hang die aan de GitHub release van stap 5.
+4. Commit met een Conventional Commit-bericht.
+5. Maak **eerst** de git tag / GitHub release `v<versie>` aan, zodat de zip-URL
    resolvet — **pas daarna** de manifest-wijziging naar `main` pushen. In de
    andere volgorde zien klantsites een update waarvan de download 404't.
-5. Zet `manifest.xml` daarna **ook op de brugbranch `master`**. Deze stap is geen
+6. Zet `manifest.xml` daarna **ook op de brugbranch `master`**. Deze stap is geen
    bijzaak en geen optie:
 
    ```bash
@@ -66,9 +68,9 @@ URL's zijn tegelijk in gebruik:
 | Sites op v1.3.1 of nieuwer | `https://raw.githubusercontent.com/YZCommunicatie/yzc-opengraph/main/manifest.xml` |
 | Sites op v1.3.0 | `https://raw.githubusercontent.com/YZCommunicatie/YZC-Opengraph/master/manifest.xml` |
 
-Sla je stap 5 over, dan zien de sites op v1.3.0 de nieuwe release niet, installeren ze
+Sla je stap 6 over, dan zien de sites op v1.3.0 de nieuwe release niet, installeren ze
 nooit de versie die hun feed-URL naar `main` verlegt, en blijven ze eeuwig hangen. Sla
-je stap 4 over, dan gebeurt precies hetzelfde bij de sites die juist wél netjes zijn
+je stap 5 over, dan gebeurt precies hetzelfde bij de sites die juist wél netjes zijn
 bijgewerkt. Er is geen enkele branch die in zijn eentje volstaat.
 
 Op `master` wordt **alleen** `manifest.xml` bijgehouden. De rest van die branch is
