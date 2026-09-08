@@ -29,7 +29,7 @@ declare(strict_types=1);
  * Bump this whenever build.php changes, so a `grep -r BUILD_PHP_VERSION`
  * across every repo shows at a glance whether copies have drifted apart.
  */
-const BUILD_PHP_VERSION = '1.0.1';
+const BUILD_PHP_VERSION = '1.0.2';
 
 /**
  * File and directory basenames that never belong in a release zip,
@@ -45,6 +45,19 @@ const BUILD_PHP_VERSION = '1.0.1';
  * .claude/settings.local.json shipped in a build before this was added —
  * see the 2026-09-03 fix round in the harmonisation report).
  *
+ * .gitattributes joined all thirteen extension repos on 2026-09-08, after
+ * this list was last touched, so every build made since then quietly
+ * shipped it — the same class of gap as the .claude case above. Fixed the
+ * same day it was introduced; no release asset was ever built with it
+ * present (see the harmonisation report for that verification).
+ *
+ * tools is here because of yzc-fulfilment-facturen's tools/activate.php,
+ * which exists "voor gebruik door de tests" (CLAUDE.md) and requires
+ * tests/bootstrap.php — a dev-only CLI helper, not part of the shipped
+ * plugin. Excluded by basename rather than a repo-local .distignore for the
+ * same reason as .claude: it then also covers any other repo that grows a
+ * tools/ directory later.
+ *
  * LICENSE is deliberately NOT here: CONVENTIONS.md is explicit that it must
  * ship, because it is part of the GPL distribution requirement.
  */
@@ -58,11 +71,13 @@ const DEFAULT_EXCLUDE_BASENAMES = [
     '.gitignore',
     '.git-blame-ignore-revs',
     '.distignore',
+    '.gitattributes',
     'README.md',
     'CLAUDE.md',
     'MIGRATIE.md',
     'docs',
     'tests',
+    'tools',
     'dist',
     'build.php',
 ];
