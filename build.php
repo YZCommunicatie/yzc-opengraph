@@ -29,7 +29,7 @@ declare(strict_types=1);
  * Bump this whenever build.php changes, so a `grep -r BUILD_PHP_VERSION`
  * across every repo shows at a glance whether copies have drifted apart.
  */
-const BUILD_PHP_VERSION = '1.0.2';
+const BUILD_PHP_VERSION = '1.0.3';
 
 /**
  * File and directory basenames that never belong in a release zip,
@@ -51,12 +51,17 @@ const BUILD_PHP_VERSION = '1.0.2';
  * same day it was introduced; no release asset was ever built with it
  * present (see the harmonisation report for that verification).
  *
- * tools is here because of yzc-fulfilment-facturen's tools/activate.php,
- * which exists "voor gebruik door de tests" (CLAUDE.md) and requires
- * tests/bootstrap.php — a dev-only CLI helper, not part of the shipped
- * plugin. Excluded by basename rather than a repo-local .distignore for the
- * same reason as .claude: it then also covers any other repo that grows a
- * tools/ directory later.
+ * tools is deliberately NOT here, even though it was added and then removed
+ * again the same day (2026-09-08): only one of the thirteen repos,
+ * yzc-fulfilment-facturen, has a tools/ directory, and it holds
+ * tools/activate.php, a dev-only CLI helper for its own tests — not
+ * something every repo grows the way .idea or .claude do. That makes it a
+ * repo-specific exclusion, which belongs in that repo's own .distignore,
+ * not in this shared list. Putting it here silently drops a tools/
+ * directory from any future repo's zip too, including one where tools/
+ * holds code the extension actually needs at runtime — a failure that
+ * removes shipped functionality without so much as a warning. See
+ * yzc-fulfilment-facturen/.distignore for the actual exclusion.
  *
  * LICENSE is deliberately NOT here: CONVENTIONS.md is explicit that it must
  * ship, because it is part of the GPL distribution requirement.
@@ -77,7 +82,6 @@ const DEFAULT_EXCLUDE_BASENAMES = [
     'MIGRATIE.md',
     'docs',
     'tests',
-    'tools',
     'dist',
     'build.php',
 ];
