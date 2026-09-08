@@ -57,8 +57,10 @@ of testsuite — gewone PHP/XML, direct bewerkt. Gebruikt de moderne namespaced 
 Klantsites updaten automatisch via dit repo, dus een release vereist:
 
 1. Bump `<version>` in `opengraph.xml`.
-2. Maak **eerst** de git tag / GitHub release `v<versie>` aan, zodat de zip-URL resolvet.
-3. Werk **pas daarna** `manifest.xml` bij (versie + `<downloadurl>`) en push — in de andere
+2. Bouw de installatiezip met `php build.php` (schrijft `dist/opengraph-<versie>.zip`).
+3. Maak **eerst** de git tag / GitHub release `v<versie>` aan (met de zip als release-asset),
+   zodat de zip-URL resolvet.
+4. Werk **pas daarna** `manifest.xml` bij (versie + `<downloadurl>`) en push — in de andere
    volgorde zien klantsites een update waarvan de download 404't. Zie hoofdstuk 6 van
    `CONVENTIONS.md`.
 
