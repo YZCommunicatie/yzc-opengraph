@@ -39,7 +39,7 @@ of testsuite — gewone PHP/XML, direct bewerkt. Gebruikt de moderne namespaced 
   `plgSystemOpengraphInstallerScript`, Joomla-conventie voor installer scripts): activeert de
   plugin automatisch bij installatie.
 - `manifest.xml` — de update-feed, ruwvorm opgehaald vanaf de `main`-branch van dit repo
-  door Joomla-sites (en tot de brugbranch verdwijnt ook nog vanaf `master`). **Niet aanraken buiten het releaseproces** — zie "Releasing a new version".
+  door Joomla-sites. **Niet aanraken buiten het releaseproces** — zie "Releasing a new version".
 - `language/en-GB/en-GB.plg_system_opengraph.ini` — alle veldlabels die in `opengraph.xml`
   gebruikt worden. Er is alleen een en-GB-taalbestand, geen nl-NL — niet vanzelfsprekend voor
   een Nederlandse extensie, maar de reden dat de instellingen van deze plugin in het Engels
@@ -67,10 +67,10 @@ Klantsites updaten automatisch via dit repo, dus een release vereist:
 > Deze repo heette tot 3 september 2026 `YZC-Opengraph` en serveerde de feed vanaf `master`.
 > Sinds v1.3.1 wijst de feed-URL naar
 > `raw.githubusercontent.com/YZCommunicatie/yzc-opengraph/main/manifest.xml`.
-> De brugbranch `master` blijft bewust bestaan (zie hoofdstuk 3 van `CONVENTIONS.md`): klantsites
-> die nog v1.3.0 draaien bevragen de oude URL op `master`. Zolang die brug bestaat, moet
-> `manifest.xml` op `master` bij elke release meebijgewerkt worden (`git checkout master &&
-> git checkout main -- manifest.xml`) — anders blijven die sites eeuwig hangen op de oude versie.
+> De brugbranch `master` is op 10 september 2026 verwijderd, nadat was vastgesteld dat geen klantsite
+> nog op v1.3.0 draait (zie uitzondering 5 in hoofdstuk 3 van `CONVENTIONS.md`). `manifest.xml` hoeft
+> dus **alleen** nog op `main` bijgewerkt te worden. De laatste stand van die branch was
+> `1bf882e4eb8a`; terugzetten kan met `git push origin 1bf882e4eb8a:refs/heads/master`.
 
 ## Conventions
 
