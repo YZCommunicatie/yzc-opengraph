@@ -4,17 +4,18 @@ Joomla-systeemplugin (`plg_system_opengraph`) die Open Graph-, Twitter Card- en 
 
 ## Wat het doet
 
-- Zet algemene tags: `og:locale`, `og:site_name`, `og:url`, `og:title`, `fb:pages`, `fb:app_id`.
+- Zet algemene tags: `og:locale`, `og:site_name`, `og:url`, `og:title`, `og:type` (`website`, of `article` op een artikel), `fb:pages`, `fb:app_id`.
+- `og:url` is de canonical van de pagina als die er is. Anders de huidige URL; bij een SEF-pad van `com_content` zonder querystring.
 - Zet Twitter Card-tags: `twitter:card` (instelbaar type), optioneel `twitter:site` en `twitter:creator`, plus `twitter:title`.
-- Op een artikel (`com_content.article`): `og:type=article` met `article:author`, `article:published_time`, `article:expiration_time`, `article:modified_time` en `og:updated_time`.
-- Op een categorie (`com_content.category`): `og:type=website`.
-- Binnen `com_content`: paginabeschrijving (`description`, `og:description`, `twitter:description`) en, als er een afbeelding gevonden wordt (artikel-, categorie- of fallback-afbeelding), `og:image` met afmetingen/mimetype/alt-tekst en `twitter:image`.
+- Op een artikel: `article:author`, `article:published_time`, `article:expiration_time`, `article:modified_time` en `og:updated_time`, met datums in ISO 8601. De auteur is de auteursalias of anders de accountnaam, en alleen als *Auteur tonen* aan staat.
+- Binnen `com_content`: beschrijving (`description`, `og:description`, `twitter:description`) en afbeelding (`og:image` met type, afmetingen en alt-tekst, `twitter:image` met alt-tekst). Volgorde van de afbeelding: intro, volledig artikel (of categorie), terugvalafbeelding. Afmetingen worden uit het lokale bestand gelezen.
+- Toont niets van een artikel of categorie die de bezoeker niet mag zien; foutpagina's krijgen geen tags.
 - Draait alleen aan de site-kant, op het event `onBeforeCompileHead`, en slaat feed-formaten en `com_finder` over.
 
 ## Vereisten
 
-- Joomla 4 / 5
-- PHP 7.2 of hoger (bepaald door de minimale Joomla-versie)
+- Joomla 5 of 6
+- PHP 8.1 of hoger
 
 ## Installatie
 
@@ -34,9 +35,13 @@ Voor dit project concreet:
 
 1. Bump `<version>` in `opengraph.xml`.
 2. Bump `<version>` in `manifest.xml` **en** werk de `<downloadurl>` bij naar de
-   zip van de nieuwe `v<versie>`-tag.
+   zip van de nieuwe `v<versie>`-tag. Dit moet vóór het bouwen: `build.php`
+   weigert als de twee versienummers verschillen.
 3. Bouw de installatiezip met `php build.php` (schrijft
-   `dist/opengraph-<versie>.zip`) en hang die aan de GitHub release van stap 5.
+   `dist/opengraph-<versie>.zip`), zet de SHA-256 ervan in `<sha256>` in
+   `manifest.xml` (`sha256sum dist/opengraph-<versie>.zip`) en hang precies die zip
+   aan de GitHub release van stap 5. Opnieuw bouwen geeft een andere checksum, en
+   Joomla weigert een update waarvan de checksum niet klopt.
 4. Commit met een Conventional Commit-bericht.
 5. Maak **eerst** de git tag / GitHub release `v<versie>` aan, zodat de zip-URL
    resolvet — **pas daarna** de manifest-wijziging naar `main` pushen. In de

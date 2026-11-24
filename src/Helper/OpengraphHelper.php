@@ -2,285 +2,415 @@
 
 /*
  *  package: YZC - Open Graph plugin
- *  copyright: Copyright (c) 2025. Jeroen Moolenschot | YZCommunicatie
+ *  copyright: Copyright (c) 2026. Jeroen Moolenschot | YZCommunicatie
  *  license: GNU General Public License version 3 or later
  *  link: https://www.yzcommunicatie.nl
  */
 
 namespace YZCommunicatie\Plugin\System\Opengraph\Helper;
 
-\defined('_JEXEC') or die;
+use Joomla\CMS\Application\SiteApplication;
+use Joomla\CMS\Document\HtmlDocument;
 use Joomla\CMS\Factory;
-use Joomla\CMS\Menu\Menu;
-use Joomla\CMS\Table\Content;
-use Joomla\CMS\Table\Category;
 use Joomla\CMS\Uri\Uri;
-use Joomla\CMS\User\UserFactoryInterface;
 use Joomla\Database\DatabaseInterface;
-use function mb_substr;
-use function phpsubstr;
-class OpengraphHelper
+use Joomla\Database\ParameterType;
+use Joomla\Registry\Registry;
+
+// phpcs:disable PSR1.Files.SideEffects
+\defined('_JEXEC') or die;
+// phpcs:enable PSR1.Files.SideEffects
+
+/**
+ * Builds the tag values for one request. The article or category is loaded once, in the constructor.
+ */
+final class OpengraphHelper
 {
-    public static function getSitename()
-    {
-        return Factory::getApplication()->getConfig()->get('sitename');
-    }
+    private const DESCRIPTION_LENGTH = 156;
 
-    public static function getUrl()
-    {
-        return Uri::getInstance();
-    }
+    private string $option;
 
-    public static function getDescription()
-    {
-        $description = '';
-        $descText    = '';
-        $menuItemId = Factory::getApplication()->input->get('Itemid', 0, 'int');
-        $menu       = Factory::getApplication()->getMenu();
-        $menuItem   = $menu->getItem($menuItemId);
-        if ($menuItem) {
-            $params   = $menuItem->getParams();
-            $descText = $params->get('menu-meta_description');
-        }
+    private string $view;
 
-        if (self::getScope() === 'com_content.category') {
-            $category = self::getCategory(Factory::getApplication()->input->get('id', 0, 'int'));
-            if ($category->metadesc) {
-                $descText = $category->metadesc;
-            } elseif (!isset($descText)) {
-                $descText = $category->description;
-            }
-        }
+    /**
+     * The article or category of this request, null when there is none or the visitor may not see it.
+     */
+    private ?object $item = null;
 
-        if (self::getScope() === 'com_content.article') {
-            $article = self::getArticle(Factory::getApplication()->input->get('id', 0, 'int'));
-            if ($article->metadesc) {
-                $descText = $article->metadesc;
-            } elseif (!isset($descText)) {
-                $descText = $article->introtext . ' ' . $article->fulltext;
-            }
-        }
+    private string $description = '';
 
-        if ($descText) {
-            $description = self::truncate($descText, 156, true, '...');
-        }
+    /**
+     * @var array{url: string, alt: string, width: int, height: int, mime: string}|null
+     */
+    private ?array $image = null;
 
-        return $description;
-    }
+    public function __construct(
+        private SiteApplication $app,
+        private DatabaseInterface $db,
+        private Registry $params
+    ) {
+        $input        = $app->getInput();
+        $this->option = $input->getCmd('option', '');
+        $this->view   = $input->getCmd('view', '');
 
-    public static function getScope()
-    {
-        $input  = Factory::getApplication()->input;
-        $option = $input->get('option', '', 'cmd');
-        $view   = $input->get('view', '', 'cmd');
-        $scope  = $option . '.' . $view;
-        return $scope;
-    }
-
-    public static function getArticle(int $id): Content
-    {
-        $db      = Factory::getContainer()->get(DatabaseInterface::class);
-        $article = new Content($db);
-        $article->load($id);
-        return $article;
-    }
-
-    public static function getCategory(int $id): Category
-    {
-        $db      = Factory::getContainer()->get(DatabaseInterface::class);
-        $article = new Category($db);
-        $article->load($id);
-        return $article;
-    }
-
-    public static function truncate($str, $length = 0, $strip = false, $ellipsis = '...')
-    {
-        $result = $str;
-        if ($strip) {
-        // {tag}text{/tag}
-            $result = preg_replace('#{(.*?)}(.*?){\/(.*?)}#s', '', $result);
-        // {tag}
-            $result = preg_replace('#{(.*?)}#s', '', $result);
-        // <script>...</script>
-            $result = preg_replace('#<script\b[^>]*>(.*?)<\/script>#is', '', $result);
-        // [widgetkit: xyz]
-            $result = preg_replace('#\[(.*?)\]#s', '', $result);
-            $result = strip_tags($result);
-            $result = preg_replace('#\r|\n|\t|&nbsp;#', ' ', $result);
-            $result = preg_replace('#(  )#', ' ', $result);
-            $result = trim($result);
-        }
-
-        if (extension_loaded('mbstring')) {
-            if (mb_strlen($result) > $length && $length !== 0) {
-                if ($length > mb_strlen($ellipsis)) {
-                    $length = $length - mb_strlen($ellipsis);
-                }
-
-                $result = mb_substr($result, 0, $length) . $ellipsis;
-            }
-        } else {
-            if (strlen($result) > $length && $length !== 0) {
-                if ($length > strlen($ellipsis)) {
-                    $length = $length - strlen($ellipsis);
-                }
-
-                $result = phpsubstr($result, 0, $length) . $ellipsis;
-            }
-        }
-
-        return $result;
-    }
-
-    public static function getPublishedtime()
-    {
-        $article = self::getArticle(Factory::getApplication()->input->get('id', 0, 'int'));
-        return $article->publish_up;
-    }
-
-    public static function getExpirationTime()
-    {
-        $article = self::getArticle(Factory::getApplication()->input->get('id', 0, 'int'));
-        return $article->publish_down;
-    }
-
-    public static function getModifiedtime()
-    {
-        $article = self::getArticle(Factory::getApplication()->input->get('id', 0, 'int'));
-        return $article->modified;
-    }
-
-    public static function getImageInfo($config)
-    {
-        if (self::getImage($config)) {
-            return getimagesize(self::getImage($config));
-        } else {
-            return false;
-        }
-    }
-
-    public static function getImage($config)
-    {
-        $image = '';
-        if ($config->fallback_image) {
-            $image = $config->fallback_image;
-        }
-
-        if (self::getScope() === 'com_content.category') {
-            $category = self::getCategory(Factory::getApplication()->input->get('id', 0, 'int'));
-            if ($category->params) {
-                $params = json_decode($category->params);
-                if ($params && !empty($params->image)) {
-                    if (strpos($params->image, '#') !== false) {
-                            $image = substr($params->image, 0, strpos($params->image, '#'));
-                    } else {
-                                $image = $params->image;
-                    }
-                }
-            }
-        }
-
-        if (self::getScope() === 'com_content.article') {
-            $article = self::getArticle(Factory::getApplication()->input->get('id', 0, 'int'));
-            if (json_last_error() === 0) {
-                $articleImages = json_decode($article->images, true);
-            }
-
-            if (isset($articleImages['image_fulltext'])) {
-                if (isset($articleImages['image_fulltext']) && strpos($articleImages['image_fulltext'], '#') !== false) {
-                    $image = substr($articleImages['image_fulltext'], 0, strpos($articleImages['image_fulltext'], '#'));
-                } else {
-                    $image = $articleImages['image_fulltext'];
-                }
-            }
-
-            if (isset($articleImages['image_intro'])) {
-                if (isset($articleImages['image_intro']) && strpos($articleImages['image_intro'], '#') !== false) {
-                    $image = substr($articleImages['image_intro'], 0, strpos($articleImages['image_intro'], '#'));
-                } else {
-                    $image = $articleImages['image_intro'];
-                }
-            }
-        }
-
-        $image = preg_replace('~^([\w\-./\\\]+).*$~', '$1', $image);
-        if (!$image) {
+        if ($this->option !== 'com_content') {
             return;
         }
 
-        $url = empty(Uri::root()) ? '' : rtrim(Uri::base(), '/') . '/';
-        $url .= $image;
-        return $url;
+        $id = $input->getInt('id', 0);
+
+        if ($this->view === 'article') {
+            $this->item = $this->loadArticle($id);
+        } elseif ($this->view === 'category') {
+            $this->item = $this->loadCategory($id);
+        }
+
+        $this->description = $this->buildDescription();
+        $this->image       = $this->buildImage();
     }
 
-    public static function getImageAlt($config)
+    /**
+     * @return array<string, string>
+     */
+    public function getPropertyTags(HtmlDocument $document): array
     {
-        // Use Article title when no Image ALT
-        $alt = self::getTitle();
-        if ($config->fallback_image_alt) {
-            $alt = $config->fallback_image_alt;
+        $tags = [
+            'fb:pages'     => (string) $this->params->get('fb_page_id', ''),
+            'fb:app_id'    => (string) $this->params->get('fb_app_id', ''),
+            'og:locale'    => str_replace('-', '_', $this->app->getLanguage()->getTag()),
+            'og:site_name' => (string) $this->app->get('sitename', ''),
+            'og:url'       => $this->getUrl($document),
+            'og:title'     => $this->getTitle($document),
+            'og:type'      => 'website',
+        ];
+
+        if ($this->view === 'article' && $this->item) {
+            $modified = $this->toIso8601($this->item->modified);
+
+            $tags['og:type']                 = 'article';
+            $tags['article:author']          = $this->getAuthor();
+            $tags['article:published_time']  = $this->toIso8601($this->item->publish_up);
+            $tags['article:expiration_time'] = $this->toIso8601($this->item->publish_down);
+            $tags['article:modified_time']   = $modified;
+            $tags['og:updated_time']         = $modified;
         }
 
-        if (self::getScope() === 'com_content.category') {
-            $category = self::getCategory(Factory::getApplication()->input->get('id', 0, 'int'));
-            if ($category->params) {
-                $params = json_decode($category->params);
-                if ($params && !empty($params->image_alt)) {
-                    $alt = $params->image_alt;
-                }
-            }
+        $tags['og:description'] = $this->description;
+
+        if ($this->image) {
+            $tags['og:image']        = $this->image['url'];
+            $tags['og:image:type']   = $this->image['mime'];
+            $tags['og:image:width']  = $this->image['width'] ? (string) $this->image['width'] : '';
+            $tags['og:image:height'] = $this->image['height'] ? (string) $this->image['height'] : '';
+            $tags['og:image:alt']    = $this->image['alt'] ?: $this->getTitle($document);
         }
 
-        if (self::getScope() === 'com_content.article') {
-            $article = self::getArticle(Factory::getApplication()->input->get('id', 0, 'int'));
-            if (json_last_error() === 0) {
-                $articleImages = json_decode($article->images, true);
-            }
-
-            if (isset($articleImages['image_fulltext'])) {
-                $alt = $articleImages['image_fulltext_alt'];
-            }
-
-            if (isset($articleImages['image_intro'])) {
-                $alt = $articleImages['image_intro_alt'];
-            }
-        }
-
-        return $alt;
+        return $tags;
     }
 
-    public static function getTitle()
+    /**
+     * @return array<string, string>
+     */
+    public function getNameTags(HtmlDocument $document): array
     {
-        $title = '';
-        $document = Factory::getApplication()->getDocument();
-        $title    = $document->title;
-        if (self::getScope() === 'com_content.category') {
-            $category = self::getCategory(Factory::getApplication()->input->get('id', 0, 'int'));
-            if ($category->title) {
-                $title = $category->title;
+        $tags = [
+            'twitter:card'        => (string) $this->params->get('twitter_type', 'summary_large_image'),
+            'twitter:site'        => $this->getTwitterHandle('twitter_site'),
+            'twitter:creator'     => $this->getTwitterHandle('twitter_author'),
+            'twitter:title'       => $this->getTitle($document),
+            'twitter:description' => $this->description,
+        ];
+
+        if ($this->image) {
+            $tags['twitter:image']     = $this->image['url'];
+            $tags['twitter:image:alt'] = $this->image['alt'] ?: $this->getTitle($document);
+        }
+
+        return $tags;
+    }
+
+    public function getDescription(): string
+    {
+        return $this->description;
+    }
+
+    private function getTitle(HtmlDocument $document): string
+    {
+        return (string) ($this->item->title ?? '') ?: (string) $document->getTitle();
+    }
+
+    private function getTwitterHandle(string $param): string
+    {
+        $handle = ltrim(trim((string) $this->params->get($param, '')), '@');
+
+        return $handle === '' ? '' : '@' . $handle;
+    }
+
+    /**
+     * The canonical URL when the page has one. Otherwise the current URL, without query string when a SEF path
+     * identifies the com_content page. Elsewhere the query string can be part of the identity.
+     */
+    private function getUrl(HtmlDocument $document): string
+    {
+        foreach ($document->getHeadData()['links'] ?? [] as $href => $link) {
+            if (($link['relation'] ?? '') === 'canonical' && preg_match('#^https?://#i', (string) $href)) {
+                return $href;
             }
         }
 
-        if (self::getScope() === 'com_content.article') {
-            $article = self::getArticle(Factory::getApplication()->input->get('id', 0, 'int'));
-            $title   = $article->title;
+        $uri   = Uri::getInstance();
+        $parts = ['scheme', 'host', 'port', 'path'];
+
+        // A non-SEF link to com_content stays valid on a SEF site: there the query string is the identity
+        $identified = !$uri->hasVar('option') && !$uri->hasVar('view') && !$uri->hasVar('id');
+
+        if ($this->option !== 'com_content' || !$this->app->get('sef') || !$identified) {
+            $parts[] = 'query';
         }
 
-        return $title;
+        return $uri->toString($parts);
     }
 
-    public static function getLocale()
+    /**
+     * Respects the author alias and the "show author" setting, so a hidden account name stays hidden.
+     */
+    private function getAuthor(): string
     {
-        $language = Factory::getApplication()->getLanguage()->getTag();
-        $locale   = str_replace('-', '_', $language);
-        return $locale;
+        if (!$this->item->params->get('show_author')) {
+            return '';
+        }
+
+        return (string) ($this->item->created_by_alias ?: $this->item->author);
     }
 
-    public static function getAuthor()
+    private function toIso8601(?string $date): string
     {
-        $article = self::getArticle(Factory::getApplication()->input->get('id', 0, 'int'));
-        $user    = Factory::getContainer()->get(UserFactoryInterface::class)->loadUserById($article->created_by);
-        $author  = $user->name;
-        return $author;
+        if (!$date || str_starts_with($date, '0000')) {
+            return '';
+        }
+
+        return Factory::getDate($date)->toISO8601();
+    }
+
+    private function buildDescription(): string
+    {
+        $menuItem = $this->app->getMenu()->getActive();
+        $text     = $menuItem ? (string) $menuItem->getParams()->get('menu-meta_description', '') : '';
+
+        if ($this->item) {
+            $text = $this->item->metadesc ?: $text ?: $this->item->text;
+        }
+
+        return $this->truncate((string) $text, self::DESCRIPTION_LENGTH);
+    }
+
+    /**
+     * @return array{url: string, alt: string, width: int, height: int, mime: string}|null
+     */
+    private function buildImage(): ?array
+    {
+        $candidates   = $this->item ? $this->item->images : [];
+        $candidates[] = [
+            (string) $this->params->get('fallback_image', ''),
+            (string) $this->params->get('fallback_image_alt', ''),
+        ];
+
+        foreach ($candidates as [$source, $alt]) {
+            $image = $this->resolveImage($source);
+
+            if ($image) {
+                return $image + ['alt' => trim($alt)];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{url: string, width: int, height: int, mime: string}|null
+     */
+    private function resolveImage(string $source): ?array
+    {
+        // The media field appends its own data behind a #
+        $source = trim(explode('#', $source, 2)[0]);
+        $info   = ['width' => 0, 'height' => 0, 'mime' => ''];
+
+        if ($source === '') {
+            return null;
+        }
+
+        if (str_starts_with($source, '//')) {
+            $source = Uri::getInstance()->getScheme() . ':' . $source;
+        }
+
+        if (preg_match('#^https?://#i', $source)) {
+            return ['url' => $source] + $info;
+        }
+
+        $path = ltrim(str_replace('\\', '/', explode('?', $source, 2)[0]), '/');
+
+        // The path may be stored URL encoded
+        if (!is_file(JPATH_ROOT . '/' . $path)) {
+            $path = rawurldecode($path);
+        }
+
+        // Other schemes (data:, javascript:) and paths leaving the site root are never a shareable image
+        if ($path === '' || preg_match('#^[a-z][a-z0-9+.\-]*:#i', $path) || preg_match('#(^|/)\.\.(/|$)#', $path)) {
+            return null;
+        }
+
+        $file = JPATH_ROOT . '/' . $path;
+
+        // Read the local file: passing the URL would make the site request its own image over HTTP
+        $size = is_file($file) && is_readable($file) ? getimagesize($file) : false;
+
+        if ($size) {
+            $info = ['width' => $size[0], 'height' => $size[1], 'mime' => $size['mime']];
+        }
+
+        return ['url' => Uri::root() . implode('/', array_map('rawurlencode', explode('/', $path)))] + $info;
+    }
+
+    /**
+     * Loads the article under the rules of com_content: an article the visitor may not read yields null, so
+     * nothing of it ends up in the head of the 403 page.
+     */
+    private function loadArticle(int $id): ?object
+    {
+        $db    = $this->db;
+        $now   = Factory::getDate()->toSql();
+        $query = $db->getQuery(true)
+            ->select($db->quoteName([
+                'a.id', 'a.title', 'a.introtext', 'a.fulltext', 'a.metadesc', 'a.images', 'a.attribs', 'a.access',
+                'a.created_by_alias', 'a.modified', 'a.publish_up', 'a.publish_down',
+            ]))
+            ->select($db->quoteName(['c.access', 'u.name'], ['category_access', 'author']))
+            ->from($db->quoteName('#__content', 'a'))
+            ->join(
+                'INNER',
+                $db->quoteName('#__categories', 'c'),
+                $db->quoteName('c.id') . ' = ' . $db->quoteName('a.catid')
+            )
+            ->join(
+                'LEFT',
+                $db->quoteName('#__users', 'u'),
+                $db->quoteName('u.id') . ' = ' . $db->quoteName('a.created_by')
+            )
+            ->where($db->quoteName('a.id') . ' = :id')
+            ->where($db->quoteName('a.state') . ' IN (1, 2)')
+            ->where($db->quoteName('c.published') . ' > 0')
+            ->where('(' . $db->quoteName('a.publish_up') . ' IS NULL OR ' . $db->quoteName('a.publish_up') . ' <= :up)')
+            ->where(
+                '(' . $db->quoteName('a.publish_down') . ' IS NULL OR '
+                . $db->quoteName('a.publish_down') . ' >= :down)'
+            )
+            ->bind(':id', $id, ParameterType::INTEGER)
+            ->bind(':up', $now)
+            ->bind(':down', $now);
+
+        $article = $db->setQuery($query)->loadObject();
+
+        if (!$article) {
+            return null;
+        }
+
+        $article->params = $this->getArticleParams($id, (string) $article->attribs);
+        $article->text   = $article->introtext . ' ' . $article->fulltext;
+
+        if (!$this->isAuthorised((int) $article->access) || !$this->isAuthorised((int) $article->category_access)) {
+            // "Show unauthorised links" presents the intro as a teaser, but only when there is more to read
+            if (!$article->params->get('show_noauth') || (string) $article->fulltext === '') {
+                return null;
+            }
+
+            $article->text = $article->introtext;
+        }
+
+        $images          = new Registry((string) $article->images);
+        $article->images = [
+            [(string) $images->get('image_intro', ''), (string) $images->get('image_intro_alt', '')],
+            [(string) $images->get('image_fulltext', ''), (string) $images->get('image_fulltext_alt', '')],
+        ];
+
+        return $article;
+    }
+
+    private function loadCategory(int $id): ?object
+    {
+        $db    = $this->db;
+        $query = $db->getQuery(true)
+            ->select($db->quoteName(['title', 'description', 'metadesc', 'params', 'access']))
+            ->from($db->quoteName('#__categories'))
+            ->where($db->quoteName('id') . ' = :id')
+            ->where($db->quoteName('extension') . ' = ' . $db->quote('com_content'))
+            ->where($db->quoteName('published') . ' > 0')
+            ->bind(':id', $id, ParameterType::INTEGER);
+
+        $category = $db->setQuery($query)->loadObject();
+
+        if (!$category || !$this->isAuthorised((int) $category->access)) {
+            return null;
+        }
+
+        $params           = new Registry((string) $category->params);
+        $category->text   = $category->description;
+        $category->images = [[(string) $params->get('image', ''), (string) $params->get('image_alt', '')]];
+
+        return $category;
+    }
+
+    /**
+     * Same precedence as the article view: the menu item wins when it links to this article.
+     */
+    private function getArticleParams(int $id, string $attribs): Registry
+    {
+        $params        = clone $this->app->getParams('com_content');
+        $articleParams = new Registry($attribs);
+        $query         = $this->app->getMenu()->getActive()->query ?? [];
+
+        if (
+            ($query['option'] ?? '') === 'com_content'
+            && ($query['view'] ?? '') === 'article'
+            && (int) ($query['id'] ?? 0) === $id
+        ) {
+            $articleParams->merge($params);
+
+            return $articleParams;
+        }
+
+        $params->merge($articleParams);
+
+        return $params;
+    }
+
+    private function isAuthorised(int $level): bool
+    {
+        return \in_array($level, $this->app->getIdentity()->getAuthorisedViewLevels());
+    }
+
+    private function truncate(string $text, int $length): string
+    {
+        $patterns = [
+            // {tag}text{/tag}
+            '#{(.*?)}(.*?){\/(.*?)}#s',
+            // {tag}
+            '#{(.*?)}#s',
+            // <script>...</script>
+            '#<script\b[^>]*>(.*?)<\/script>#is',
+            // [widgetkit: xyz]
+            '#\[(.*?)\]#s',
+        ];
+
+        foreach ($patterns as $pattern) {
+            $text = preg_replace($pattern, '', $text) ?? $text;
+        }
+
+        $text = trim(preg_replace('#(?:\s|&nbsp;)+#', ' ', strip_tags($text)) ?? '');
+
+        if (mb_strlen($text) > $length) {
+            $text = mb_substr($text, 0, $length - 3) . '...';
+        }
+
+        return $text;
     }
 }

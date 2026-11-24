@@ -8,7 +8,7 @@ in `yzc-standards`. Dit bestand vult dat aan met wat specifiek is voor dit proje
 
 ## What this is
 
-Een Joomla 4/5-systeemplugin (`plg_system_opengraph`, element `opengraph`) die Open Graph-,
+Een Joomla 5/6-systeemplugin (`plg_system_opengraph`, element `opengraph`) die Open Graph-,
 Twitter Card- en Facebook-metatags zet voor social sharing. Geen buildstap, package manager
 of testsuite — gewone PHP/XML, direct bewerkt. Gebruikt de moderne namespaced pluginstructuur
 (DI-service-provider, `CMSPlugin`).
@@ -16,53 +16,53 @@ of testsuite — gewone PHP/XML, direct bewerkt. Gebruikt de moderne namespaced 
 ## Files
 
 - `src/Extension/Opengraph.php` — de pluginklasse
-  (`YZCommunicatie\Plugin\System\Opengraph\Extension\Opengraph`), enige event
-  `onBeforeCompileHead` (alleen site-kant, overgeslagen bij `format=feed` en `com_finder`).
-  Zet de OG-/Twitter-/FB-tags rechtstreeks via `$document->setMetaData()`.
-  - Let op regel 74, `setMetaData('description', ..., 'property')`: Joomla-core leidt de
-    sleutel `description` intern om naar `setDescription()` en negeert daarbij het derde
-    argument (`'property'`). Deze regel overschrijft dus de globale
-    `<meta name="description">` van het document, niet een aparte property-tag — vermoedelijk
-    niet wat de oorspronkelijke auteur bedoelde, maar functioneel gedrag, niet aanpassen zonder
-    het expliciet te toetsen op een testsite.
-  - **Bekende bug, bewust niet opgelost:** regel 79, `setMetadata('og:image:type ', ...)`, bevat
-    een spatie ín de tagnaam. Daardoor komt de metatag onder een verkeerde naam in de output
-    terecht in plaats van als `og:image:type`. Oplossen verandert de gerenderde output op
-    klantsites; dat is een aparte beslissing en gebeurt hier niet stilzwijgend.
-- `src/Helper/OpengraphHelper.php` — alle waarde-opbouw: sitename, locale, URL, titel,
-  beschrijving (truncate naar 156 tekens), afbeelding (artikel-/categorie-/fallback-afbeelding)
-  en auteursnaam.
-- `services/provider.php` — DI-containerregistratie van de plugin.
+  (`YZCommunicatie\Plugin\System\Opengraph\Extension\Opengraph`), een `SubscriberInterface`
+  met als enige event `onBeforeCompileHead`. Zet de tags uit de helper met
+  `$document->setMetaData()`; lege waarden worden overgeslagen. Doet niets buiten de site-kant,
+  bij `com_finder`, en op een `ErrorDocument`: een foutpagina draagt nog het verzoek van het
+  mislukte artikel, en zou dus de titel en tekst van bijvoorbeeld een concept in de head zetten.
+  - De globale `<meta name="description">` wordt **bewust** overschreven, maar alleen door een
+    niet-lege waarde. Tot en met 1.3.1 wiste de plugin ook de beschrijving van de site.
+- `src/Helper/OpengraphHelper.php` — alle waarde-opbouw. Laadt het artikel of de categorie
+  één keer, in de constructor.
+  - **`loadArticle()` en `loadCategory()` zijn een beveiligingsgrens.** Ze volgen de regels van
+    `com_content` (status, publicatiedatums, toegangsniveau van artikel én categorie,
+    `show_noauth`). Core geeft bij geen toegang alleen een 403-header en rendert de head gewoon;
+    zonder deze controle lekt de inhoud van afgeschermde artikelen.
+  - Afbeeldingsafmetingen komen uit het lokale bestand, nooit uit een URL: tot en met 1.3.1 vroeg
+    elke pagina zo drie keer een afbeelding aan de eigen site op.
+- `services/provider.php` — DI-containerregistratie van de plugin. Bevat twee vertakkingen voor
+  Joomla 5.0 t/m 5.3 (dispatcher in de constructor, geen `lazy()`); die kunnen weg zodra de
+  minimumversie 5.4 is.
 - `opengraph.xml` — Joomla-extensiemanifest: versie, `<namespace path="src">`, pluginparams
   (Twitter/Facebook/fallback) en de update-server-URL.
-- `script.php` — installer-script (legacy-vernoemde klasse
-  `plgSystemOpengraphInstallerScript`, Joomla-conventie voor installer scripts): activeert de
-  plugin automatisch bij installatie.
+- `script.php` — installerscript (`InstallerScriptInterface`): weigert installatie onder
+  Joomla 5.0 of PHP 8.1 en activeert de plugin bij een verse installatie, niet bij een update.
 - `manifest.xml` — de update-feed, ruwvorm opgehaald vanaf de `main`-branch van dit repo
   door Joomla-sites. **Niet aanraken buiten het releaseproces** — zie "Releasing a new version".
-- `language/en-GB/en-GB.plg_system_opengraph.ini` — alle veldlabels die in `opengraph.xml`
-  gebruikt worden. Er is alleen een en-GB-taalbestand, geen nl-NL — niet vanzelfsprekend voor
-  een Nederlandse extensie, maar de reden dat de instellingen van deze plugin in het Engels
-  worden getoond.
+- `language/en-GB/` en `language/nl-NL/` — veldlabels (`.ini`) en de omschrijving (`.sys.ini`).
+- `.distignore` — houdt het losse, niet-getrackte `yzc-opengraph.zip` uit de releasezip.
 
 ## Compatibility constraints
 
-- Doelplatform Joomla 4 / 5 (`targetplatform` in `manifest.xml`, niet in `opengraph.xml` — dat
-  laatste bevat geen enkele Joomla-versiegrens); geen Joomla 6-ondersteuning gemeld.
-- Minimale PHP-versie wordt bepaald door de minimale Joomla-versie (Joomla 4: PHP 7.2.5+;
-  Joomla 5: PHP 8.1+).
+- Doelplatform Joomla 5 en 6. De grens staat op twee plekken: `targetplatform` in `manifest.xml`
+  (wie de update aangeboden krijgt) en `MINIMUM_JOOMLA` in `script.php` (wie mag installeren).
+- `targetplatform` is een regex die Joomla als `/^<waarde>/` uitvoert: `[56]\.[0-9]`, niet `5|6`,
+  want dat matcht op elke versie met een 6 erin.
+- Minimale PHP-versie 8.1 (het minimum van Joomla 5.0).
 
 ## Releasing a new version
 
 Klantsites updaten automatisch via dit repo, dus een release vereist:
 
-1. Bump `<version>` in `opengraph.xml`.
-2. Bouw de installatiezip met `php build.php` (schrijft `dist/opengraph-<versie>.zip`).
-3. Maak **eerst** de git tag / GitHub release `v<versie>` aan (met de zip als release-asset),
-   zodat de zip-URL resolvet.
-4. Werk **pas daarna** `manifest.xml` bij (versie + `<downloadurl>`) en push — in de andere
-   volgorde zien klantsites een update waarvan de download 404't. Zie hoofdstuk 6 van
-   `CONVENTIONS.md`.
+1. Bump `<version>` in `opengraph.xml` **en lokaal** `<version>` + `<downloadurl>` in
+   `manifest.xml`; `build.php` weigert als ze verschillen. Nog niet pushen.
+2. Bouw de installatiezip met `php build.php` (schrijft `dist/opengraph-<versie>.zip`) en zet de
+   SHA-256 ervan in `<sha256>` in `manifest.xml`. Elke nieuwe build geeft een andere checksum.
+3. Maak **eerst** de git tag / GitHub release `v<versie>` aan (met precies die zip als
+   release-asset), zodat de zip-URL resolvet.
+4. Push **pas daarna** `manifest.xml` naar `main` — in de andere volgorde zien klantsites een
+   update waarvan de download 404't. Zie hoofdstuk 6 van `CONVENTIONS.md`.
 
 > Deze repo heette tot 3 september 2026 `YZC-Opengraph` en serveerde de feed vanaf `master`.
 > Sinds v1.3.1 wijst de feed-URL naar
@@ -89,9 +89,10 @@ Klantsites updaten automatisch via dit repo, dus een release vereist:
   `onBeforeCompileHead` en dezelfde site-client. Uit onderzoek
   (`yzc-standards/docs/superpowers/opengraph-overlap-advies.md`) blijkt dat ze vandaag geen
   enkele identieke `_metaTags`-sleutel (naam + attribuut) zetten — geen "wie wint"-conflict.
-  Wel is er een conceptuele overlap: `og:url` (deze plugin — de volledige `Uri::getInstance()`,
-  inclusief een eventuele querystring) versus `<link rel="canonical">` (`yzc-styling` — zonder
-  querystring, met `Uri::root()` als hostbron zodat een geconfigureerde `live_site` wint)
+  Wel is er een conceptuele overlap: `og:url` (deze plugin — de canonical van de pagina als die al
+  in de head staat, anders de huidige URL, bij een SEF-pad van `com_content` zonder querystring)
+  versus `<link rel="canonical">` (`yzc-styling` — zonder querystring, met `Uri::root()` als
+  hostbron zodat een geconfigureerde `live_site` wint)
   drukken beide "de canonieke URL van deze pagina" uit maar kunnen op een site met beide
   plugins actief een verschillende waarde tonen. Mocht er ooit wél een botsende
   `setMetaData()`-sleutel ontstaan: Joomla's `PluginHelper` laadt system-plugins gesorteerd op
@@ -105,7 +106,9 @@ Klantsites updaten automatisch via dit repo, dus een release vereist:
 Geen geautomatiseerde tests. Handmatig verifiëren:
 
 - `php -l` op elk gewijzigd bestand.
-- Installeer de zip op een Joomla 4/5-testsite en controleer de gerenderde `<head>`
+- Installeer de zip op een Joomla 5- én een Joomla 6-testsite en controleer de gerenderde `<head>`
   (view-source) op de OG-/Twitter-/FB-tags, met en zonder `yzc-styling` gelijktijdig actief.
 - Test met en zonder de optionele params (`twitter_site`, `twitter_author`,
   `fallback_image`) ingevuld, en op zowel een artikel- als een categoriepagina.
+- Open als gast een afgeschermd artikel, een concept en een niet-bestaand artikel: in de `<head>`
+  mag niets van de inhoud staan.
