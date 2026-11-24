@@ -5,18 +5,20 @@
         <type>plugin</type>
         <client>site</client>
         <folder>system</folder>
-        <version>1.3.1</version>
+        <version>1.4.0</version>
         <downloads>
             <downloadurl type="full" format="zip">
-                https://github.com/YZCommunicatie/yzc-opengraph/releases/download/v1.3.1/opengraph-1.3.1.zip
+                https://github.com/YZCommunicatie/yzc-opengraph/releases/download/v1.4.0/opengraph-1.4.0.zip
             </downloadurl>
         </downloads>
+        <sha256>2c5ecb23be6e4a3162e8c8c428ff5924502cc596b9eef8bcc727ba276e7e5364</sha256>
         <tags>
             <tag>stable</tag>
         </tags>
         <maintainer>Jeroen Moolenschot | YZCommunicatie</maintainer>
         <maintainerurl>https://www.yzcommunicatie.nl</maintainerurl>
-        <targetplatform name="joomla" version="4|5"/>
+        <php_minimum>8.1</php_minimum>
+        <targetplatform name="joomla" version="[56]\.[0-9]"/>
         <section>Updates</section>
     </update>
 </updates>
